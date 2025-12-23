@@ -36,6 +36,13 @@ The pipeline follows the **Medallion Architecture** design pattern (Bronze $\to$
 * **Language:** Python (PySpark)
 * **ML Library:** Spark MLlib
 
+### 💾 Storage Layer: Why Delta Lake?
+All data layers (Bronze, Silver, Gold, and Quarantine) are stored using **Delta Lake** format on top of GCS. This architecture was selected to ensure:
+
+1.  **Reliability (ACID Transactions):** Guarantees that data writes are either fully completed or not done at all, preventing partial data corruption during the pipeline runs.
+2.  **Quality Control:** Utilizes **Schema Enforcement** to automatically reject data that doesn't match the predefined structure.
+3.  **Performance:** Optimized for handling large-scale datasets (6.3M+ rows) with scalable metadata handling.
+
 ---
 
 ## 🚀 Key Features Implementation
