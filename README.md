@@ -40,11 +40,21 @@ The pipeline follows the **Medallion Architecture** design pattern (Bronze $\to$
 
 ## 🚀 Key Features Implementation
 
-To effectively catch fraudsters, I engineered specific features based on criminal behavior patterns:
+To effectively catch fraudsters, I utilized a total of **10 input features**, combining raw transaction data with advanced engineered features:
 
-* **`amountRatio`:** Detects "account emptying" behavior. Fraudsters often transfer the entire balance out at once.
-* **`errorBalanceOrig`:** Identifies mathematical discrepancies in the origin account (System manipulation).
-* **`hourOfDay`:** Captures time-based patterns (e.g., fraud occurring during off-hours).
+### 1. Engineered Features (Derived via Spark)
+These features were calculated in the **Gold Layer** to capture specific fraud behaviors:
+
+* **`amountRatio`**: *(Amount / OldBalance)* - Detects "account emptying" behavior, where fraudsters drain the exact remaining balance.
+* **`errorBalanceOrig`**: *(NewBal - (OldBal - Amount))* - Identifies mathematical anomalies in the origin account (e.g., balance didn't decrease as expected).
+* **`errorBalanceDest`**: *(NewBal - (OldBal + Amount))* - Identifies anomalies in the destination account.
+* **`hourOfDay`**: *(step % 24)* - Extracts the time of day to detect transactions occurring during unusual hours.
+* **`type_index`**: Encoded transaction type (Focusing on `TRANSFER` vs `CASH_OUT`).
+
+### 2. Core Transaction Features (Raw)
+* **`amount`**: Transaction value (Consistently a top predictor).
+* **`oldbalanceOrg` / `newbalanceOrig`**: Balances of the sender.
+* **`oldbalanceDest` / `newbalanceDest`**: Balances of the recipient.
 
 ---
 
@@ -93,7 +103,7 @@ What drives the fraud detection? The graph below shows that **`newbalanceOrig`**
 
 This project successfully demonstrates how to build a scalable, end-to-end data pipeline using **Spark** and **Delta Lake** on Databricks. By implementing the **Medallion Architecture**, the system ensures data quality from ingestion to analytics.
 
-The final Random Forest model achieved the primary business objective: **minimizing customer friction** (Precision **99.33%**) while maintaining a strong detection rate (Recall **80.98%**). This proves that the engineered features (`amountRatio`, `errorBalance`) were highly effective in distinguishing fraudsters from genuine users.
+The final Random Forest model achieved the primary business objective: **minimizing customer friction** (Precision **99.33%**) while maintaining a strong detection rate (Recall **80.98%**). This proves that the engineered features (`amountRatio`, `errorBalance`, `hourOfDay`) were effective in distinguishing fraudsters from genuine users.
 
 **Future Improvements (Path to Production):**
 1.  **Real-time Streaming:** Convert the ingestion layer to **Spark Structured Streaming** to block fraud transaction-by-transaction in real-time.
