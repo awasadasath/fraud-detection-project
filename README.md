@@ -24,6 +24,8 @@ The primary objective was to maximize fraud detection (Recall) while maintaining
 
 The pipeline follows the **Medallion Architecture** design pattern (Bronze $\to$ Silver $\to$ Gold) to ensure data lineage and quality:
 
+![Architecture Design](images/architecture.png)
+
 1.  **Ingestion (Bronze):** Ingest raw CSV data (~6.3M rows) into Delta Lake.
 2.  **Transformation (Silver):** Cleanse data, cast types, and quarantine invalid records (e.g., negative amounts).
 3.  **Feature Engineering (Gold):** Create behavioral features such as `amountRatio` (emptying accounts) and `errorBalance`.
