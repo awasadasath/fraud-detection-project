@@ -1,1 +1,5 @@
-
+pyspark>=3.3.0
+pandas
+matplotlib
+seaborn
+google-cloud-storage
