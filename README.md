@@ -84,7 +84,9 @@ I utilized a total of **10 input features**, combining raw transaction data with
 
 ## 📊 Model Performance & Results
 
-The model results below are based on a run with the full dataset (6,362,620 rows). (Note: The provided notebook code includes a 10% sampling step to allow for faster execution in limited demo environments.)
+The pipeline processed the full dataset (**6.3M+ records**). However, the Random Forest model was trained specifically on the **2,770,409 relevant records** (`TRANSFER` & `CASH_OUT` types) where fraud actually occurs.
+
+*(Note: The provided notebook code includes a 10% sampling step to allow for faster execution in limited demo environments, but the results below are based on the full 2.77M dataset.)*
 
 ### 🎯 Key Metrics (Fraud Class Focus)
 
