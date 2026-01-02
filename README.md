@@ -84,7 +84,7 @@ I utilized a total of **10 input features**, combining raw transaction data with
 
 ## 📊 Model Performance & Results
 
-The model was trained and tested on the full dataset (**6,362,620 rows**). The results demonstrate a highly effective balance between catching fraud and protecting good users.
+The model results below are based on a run with the full dataset (6,362,620 rows). (Note: The provided notebook code includes a 10% sampling step to allow for faster execution in limited demo environments.)
 
 ### 🎯 Key Metrics (Fraud Class Focus)
 
