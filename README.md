@@ -107,7 +107,7 @@ The confusion matrix below confirms the model's reliability:
 ![Confusion Matrix](images/confusion_matrix.png)
 
 ### 📈 Feature Importance
-What drives the fraud detection? The graph below shows that **`newbalanceOrig`**, **`amount`**, and **`amountRatio`** are the most critical indicators used by the model.
+What drives the fraud detection? The graph below shows that **`newbalanceOrig`** and **`amount`** are the most critical indicators used by the model.
 
 ![Feature Importance](images/feature_importance.png)
 
