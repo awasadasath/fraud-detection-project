@@ -27,7 +27,10 @@ The pipeline follows the **Medallion Architecture** design pattern (Bronze $\to$
 ![Architecture Design](images/architecture.png)
 
 1.  **Ingestion (Bronze):** Ingest raw CSV data (~6.3M rows) into Delta Lake.
-2.  **Transformation (Silver):** Cleanse data, cast types, and quarantine invalid records (e.g., negative amounts).
+2.  **Transformation (Silver)**: Implements a 3-way data split:
+Silver: Valid data for ML (Transfer/Cash-out).
+Others: Out-of-scope data (Payment/Debit) archived for analytics.
+Quarantine: Technical errors (e.g., negative amounts) for auditing.
 3.  **Feature Engineering (Gold):** Create behavioral features such as `amountRatio` (emptying accounts) and `errorBalance`.
 4.  **Machine Learning:** Train a Random Forest Classifier using Spark MLlib.
 
@@ -39,7 +42,7 @@ The pipeline follows the **Medallion Architecture** design pattern (Bronze $\to$
 * **ML Library:** Spark MLlib
 
 ### 💾 Storage Layer: Why Delta Lake?
-All data layers (Bronze, Silver, Gold, and Quarantine) are stored using **Delta Lake** format on top of GCS. This architecture was selected to ensure:
+All data layers (Bronze, Silver, Gold, Quarantine, and Others) are stored using the **Delta Lake format**. This architecture was selected to ensure:
 
 1.  **Reliability (ACID Transactions):** Guarantees that data writes are either fully completed or not done at all, preventing partial data corruption during the pipeline runs.
 2.  **Quality Control:** Utilizes **Schema Enforcement** to automatically reject data that doesn't match the predefined structure.
@@ -51,10 +54,11 @@ All data layers (Bronze, Silver, Gold, and Quarantine) are stored using **Delta 
 
 To effectively catch fraudsters, I implemented a robust pipeline that handles data quality, customer profiling, and advanced feature engineering:
 
-### 1. Data Quality & Quarantine (Silver Layer)
-Ensured strict data integrity by segregating bad data before it reaches the analytics layer.
-* **Validation Rule:** Filtered out transactions with negative amounts or invalid types.
-* **Quarantine Mechanism:** Invalid records are automatically routed to a separate **`paysim_quarantine`** table for auditing, keeping the main training pipeline clean.
+### 1. Intelligent Data Routing (Silver Layer)
+Instead of simply deleting data, I implemented a strategic 3-way split to handle data lifecycles:
+* **Silver Table (Target):** Filters only TRANSFER and CASH_OUT transactions, which are the relevant scopes for fraud detection.
+* **Others Table (Out-of-Scope):** Automatically archives valid but irrelevant transaction types (e.g., PAYMENT, DEBIT) for future analytics rather than discarding them.
+* **Quarantine Table (Bad Data):** Segregates technical errors (e.g., negative amounts) into a separate table for auditing, ensuring the ML pipeline remains clean.
 
 ### 2. Customer Risk Profiling (Gold Layer)
 Beyond individual transactions, I created a **Customer Dimension Table** (`dim_customer_risk`) to track user risk history.
