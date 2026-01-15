@@ -72,7 +72,7 @@ The pipeline handled the entire dataset robustly. Here is the breakdown of the d
 **Sampling Strategy:**
 To optimize for the Community Edition environment while handling class imbalance:
 * **Training Set:** 114,547 rows (Included **100% of Fraud cases** + 5% of Normal cases).
-* **Test Set:** 31,448 rows (Unseen future data for evaluation).
+* **Test Set:** 31,448 rows (Unseen future data, **sampled at 5%** to fit Community Edition memory limits).
 
 ---
 
