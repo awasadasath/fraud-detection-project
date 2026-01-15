@@ -5,135 +5,137 @@
 <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Google_Cloud_logo.svg" alt="Google Cloud" width="150" style="margin-right: 20px;"/>
 <img src="https://upload.wikimedia.org/wikipedia/commons/6/63/Databricks_Logo.png" alt="Databricks" width="150" style="margin-right: 20px;"/>
 <img src="https://upload.wikimedia.org/wikipedia/commons/f/f3/Apache_Spark_logo.svg" alt="Apache Spark" width="110" style="margin-right: 20px;"/>
-<img src="images/delta_logo.png" alt="Delta Lake" width="150"/>
+<img src="https://upload.wikimedia.org/wikipedia/commons/d/df/Delta_Lake_logo.png" alt="Delta Lake" width="150"/>
 
 </div>
 
 ## 📌 Project Overview
-This project demonstrates a scalable Data Engineering pipeline built to detect fraudulent mobile money transactions. Using **Databricks** and the **Medallion Architecture**, the system processes over **6.3 million transactions**, enforces data quality, and utilizes Machine Learning to identify fraud patterns with high precision.
+This project demonstrates a scalable, production-grade Data Engineering pipeline built to detect fraudulent mobile money transactions. Using **Databricks** and the **Medallion Architecture**, the system processes over **6.3 million transactions**, enforces data quality, and utilizes Machine Learning to identify fraud patterns with near-perfect precision.
 
 **Business Goal:**
-The primary objective was to maximize fraud detection (Recall) while maintaining **Near-Perfect Precision (>99%)** to ensure that genuine customer transactions are almost never blocked (minimizing customer friction).
+The primary objective was to maximize fraud detection (Recall) while maintaining **Near-Perfect Precision (>99.9%)** to ensure that genuine customer transactions are almost never blocked (minimizing customer friction).
 
 ![Data Sample](images/data_sample.png)
 *Snapshot of the processed transaction data.*
 
 ---
 
+## 📂 Data Dictionary
+
+The dataset consists of **11 columns** representing transaction details. Below are the key features used in this project:
+
+| Column Name | Description |
+| :--- | :--- |
+| **step** | Maps to a unit of time in the real world. In this simulation, **1 step is 1 hour**. |
+| **type** | Type of transaction (CASH-IN, CASH-OUT, DEBIT, PAYMENT, TRANSFER). *Only TRANSFER and CASH_OUT are used for fraud detection.* |
+| **amount** | Amount of the transaction in local currency. |
+| **nameOrig** | Customer who started the transaction. |
+| **oldbalanceOrg** | Initial balance before the transaction. |
+| **newbalanceOrig** | New balance after the transaction. |
+| **nameDest** | Customer who is the recipient of the transaction. |
+| **oldbalanceDest** | Initial balance recipient before the transaction. |
+| **newbalanceDest** | New balance recipient after the transaction. |
+| **isFraud** | **Target Variable.** Actual fraud status (1 = Fraud, 0 = Normal). |
+| **isFlaggedFraud** | The business rule controls massive transfers (>200.000). *Not used in this model as we built our own rules.* |
+
+---
+
 ## 🏗️ Architecture & Tech Stack
 
-The pipeline follows the **Medallion Architecture** design pattern (Bronze $\to$ Silver $\to$ Gold) to ensure data lineage and quality:
+The pipeline follows the **Medallion Architecture** design pattern (Bronze $\to$ Silver $\to$ Gold) ensuring robust data lineage:
 
 ![Architecture Design](images/architecture_diagram.png)
 
-1.  **Ingestion (Bronze):** Ingest raw CSV data (~6.3M rows) into Delta Lake.
-2.  **Transformation (Silver)**: Implements a 3-way data split:
-Silver: Valid data for ML (Transfer/Cash-out).
-Others: Out-of-scope data (Payment/Debit) archived for analytics.
-Quarantine: Technical errors (e.g., negative amounts) for auditing.
-3.  **Feature Engineering (Gold):** Create behavioral features such as `amountRatio` (emptying accounts) and `errorBalance`.
-4.  **Machine Learning:** Train a Random Forest Classifier using Spark MLlib.
+1.  **Ingestion (Bronze):** Securely ingests raw CSV data from Google Cloud Storage (GCS) into Delta Lake using **Spark Native Read**.
+2.  **Transformation (Silver):** Implements a strategic 3-way data split:
+    * **Silver:** Valid transactions for ML (Transfer/Cash-out).
+    * **Others:** Out-of-scope data (Payment/Debit) archived for analytics.
+    * **Quarantine:** Technical errors (e.g., negative amounts) isolated for auditing.
+3.  **Feature Engineering (Gold):** Creates behavioral features such as `amountRatio` (emptying accounts) and `errorBalance` (mathematical anomalies).
+4.  **Machine Learning:** Trains a Random Forest Classifier using **Strict Time-Series Splitting** to prevent data leakage.
 
 **🛠️ Technologies:**
 * **Cloud Source:** Google Cloud Storage (GCS)
 * **Platform:** Databricks (Spark Engine)
-* **Storage:** Delta Lake
+* **Storage:** Delta Lake (ACID Transactions)
 * **Language:** Python (PySpark)
 * **ML Library:** Spark MLlib
+* **Security:** Key-based authentication (No hard-coded credentials).
 
-### 💾 Storage Layer: Why Delta Lake?
-All data layers (Bronze, Silver, Gold, Quarantine, and Others) are stored using the **Delta Lake format**. This architecture was selected to ensure:
+---
 
-1.  **Reliability (ACID Transactions):** Guarantees that data writes are either fully completed or not done at all, preventing partial data corruption during the pipeline runs.
-2.  **Quality Control:** Utilizes **Schema Enforcement** to automatically reject data that doesn't match the predefined structure.
-3.  **Performance:** Optimized for handling large-scale datasets (6.3M+ rows) with scalable metadata handling.
+## 📉 Data Processing Statistics
+
+The pipeline successfully processed the entire dataset of **6.3 million records**. Below is the breakdown of how data flowed through the Medallion Architecture:
+
+| Layer / Status | Row Count | Description |
+| :--- | :--- | :--- |
+| **Raw Ingestion** | **6,362,620** | Full dataset ingested from GCS. |
+| **Others (Archived)** | 3,592,211 | Payment & Debit transactions (Out of scope). |
+| **Silver (ML Ready)** | 2,770,409 | Valid TRANSFER & CASH_OUT transactions. |
+| **Quarantine** | **0** | *Data Quality Check Passed.* No records violated the "Non-Negative Amount" rule, confirming source data integrity. |
+
+**Model Sampling Strategy:**
+To optimize resource usage on the Community Edition while maintaining model performance, a **Strategic Sampling** method was applied:
+* **Training Set:** 114,547 rows (100% of Fraud + 5% of Normal).
+* **Test Set:** 31,448 rows (Unseen future data for evaluation).
 
 ---
 
 ## 🚀 Key Features Implementation
 
-To effectively catch fraudsters, I implemented a robust pipeline that handles data quality, customer profiling, and advanced feature engineering:
+### 1. Robust Data Engineering
+* **Delta Lake Integration:** All layers utilize Delta Lake format for Schema Enforcement, Audit History, and ACID guarantees.
+* **Secure Ingestion:** Implemented a secure file-based key authentication mechanism, ensuring no sensitive credentials are exposed in the codebase.
 
-### 1. Intelligent Data Routing (Silver Layer)
-Instead of simply deleting data, I implemented a strategic 3-way split to handle data lifecycles:
-* **Silver Table (Target):** Filters only TRANSFER and CASH_OUT transactions, which are the relevant scopes for fraud detection.
-* **Others Table (Out-of-Scope):** Automatically archives valid but irrelevant transaction types (e.g., PAYMENT, DEBIT) for future analytics rather than discarding them.
-* **Quarantine Table (Bad Data):** Segregates technical errors (e.g., negative amounts) into a separate table for auditing, ensuring the ML pipeline remains clean.
+### 2. Advanced Feature Engineering
+I engineered specific features to capture "thief behavior":
+* **`amountRatio`**: *(Amount / OldBalance)* - Detects "account emptying" behavior (Fraudsters often drain the exact remaining balance).
+* **`errorBalanceOrig`**: *(NewBal - (OldBal - Amount))* - Identifies mathematical anomalies in the origin account.
+* **`hourOfDay`**: Extracts transaction time patterns.
 
-### 2. Customer Risk Profiling (Gold Layer)
-Beyond individual transactions, I created a **Customer Dimension Table** (`dim_customer_risk`) to track user risk history.
-* **Logic:** Aggregates historical transaction data to identify high-value customers.
-* **Risk Tagging:** Flagged customers with single transactions exceeding 1M as "High Risk".
-
-### 3. Machine Learning Features (Gold Layer)
-I utilized a total of **10 input features**, combining raw transaction data with advanced engineered features:
-
-**A. Engineered Features (Derived via Spark)**
-* **`amountRatio`**: *(Amount / OldBalance)* - Detects "account emptying" behavior, where fraudsters drain the exact remaining balance.
-* **`errorBalanceOrig`**: *(NewBal - (OldBal - Amount))* - Identifies mathematical anomalies in the origin account (e.g., balance didn't decrease as expected).
-* **`errorBalanceDest`**: *(NewBal - (OldBal + Amount))* - Identifies anomalies in the destination account.
-* **`hourOfDay`**: *(step % 24)* - Extracts the time of day to detect transactions occurring during unusual hours.
-* **`type_index`**: Encoded transaction type (Focusing on `TRANSFER` vs `CASH_OUT`).
-
-**B. Core Transaction Features (Raw)**
-* **`amount`**: Transaction value (Consistently a top predictor).
-* **`oldbalanceOrg` / `newbalanceOrig`**: Balances of the sender.
-* **`oldbalanceDest` / `newbalanceDest`**: Balances of the recipient.
+### 3. Professional ML Strategy
+* **Strict Time-Series Split:** Instead of random splitting, data was split by time step (Train on Past, Test on Future) to realistically simulate production environments and prevent **Data Leakage**.
+* **Strategic Sampling:** To handle extreme class imbalance and optimize resource usage, I trained on **100% of Fraud cases** while downsampling **Normal cases to 5%**, creating a balanced learning environment.
 
 ---
 
 ## 📊 Model Performance & Results
 
-The pipeline processed the full dataset (**6.3M+ records**). However, the Random Forest model was trained specifically on the **2,770,409 relevant records** (`TRANSFER` & `CASH_OUT` types) where fraud actually occurs.
+The Random Forest model was evaluated on an unseen test set of **31,448 transactions** (representing the "Future" timeline).
 
-*(Note: The provided notebook code includes a 10% sampling step to allow for faster execution in limited demo environments, but the results below are based on the full 2.77M dataset.)*
-
-### 🎯 Key Metrics (Fraud Class Focus)
+### 🎯 Key Metrics
 
 | Metric | Score | Interpretation |
 | :--- | :--- | :--- |
-| **Precision** | **99.33%** | **Extremely High Accuracy.** Out of 150 flagged transactions, 149 were actual fraud. Only 1 false alarm. |
-| **Recall** | **80.98%** | **Strong Detection Rate.** Successfully caught 149 out of 184 total fraudsters. |
-| **F1-Score** | **89.22%** | A balanced performance between Precision and Recall. |
+| **Precision** | **99.93%** | **High Confidence.** When the model predicts fraud, it is correct 99.93% of the time (Only 3 False Positives). |
+| **Recall** | **99.98%** | **High Detection.** The model caught nearly every single fraudster in the test set (Missed only 1). |
+| **F1-Score** | **0.9995** | Perfect balance between Precision and Recall. |
 
-### 🔍 Deep Dive: Confusion Matrix
-The confusion matrix below confirms the model's reliability:
+*(Note: These results are based on the latest run using the optimized feature set including `errorBalance` and `amountRatio`.)*
 
-* **Total Fraud Cases:** 184
-* **Caught:** 149
-* **Missed:** 35
-* **False Positives:** Only **1** (Out of ~55,000 normal transactions tested)
+### 🔍 Confusion Matrix Breakdown
 
-![Confusion Matrix](images/confusion_matrix.png)
+The confusion matrix confirms the model's reliability in a realistic scenario:
+
+| | Predicted: Normal | Predicted: Fraud |
+| :--- | :---: | :---: |
+| **Actual: Normal** | 27,187 (TN) | **3 (FP)** |
+| **Actual: Fraud** | **1 (FN)** | **4,257 (TP)** |
+
+* **Caught Fraud (TP):** 4,257 cases successfully detected.
+* **Missed Fraud (FN):** Only 1 case missed.
+* **False Alarms (FP):** Only 3 legitimate transactions blocked.
 
 ### 📈 Feature Importance
-What drives the fraud detection? The graph below shows that **`newbalanceOrig`** and **`amount`** are the most critical indicators used by the model.
+The analysis reveals that **`newbalanceOrig`** (account balance becoming zero) and **`amountRatio`** are the strongest predictors, confirming that "emptying the account" is the primary behavior of fraudsters in this dataset.
 
 ![Feature Importance](images/feature_importance.png)
 
 ---
 
-## 📂 Project Structure
+## 💡 Conclusion
 
-```text
-├── notebooks/          # Source code (Databricks/Jupyter notebooks)
-├── images/             # Project screenshots and visualizations
-│   ├── data_sample.png
-│   ├── confusion_matrix.png
-│   └── feature_importance.png
-├── requirements.txt    # Project dependencies
-└── README.md           # Project documentation
-```
+This project demonstrates a **Production-Ready** approach to fraud detection. By moving beyond simple "accuracy" and focusing on **Data Engineering best practices** (Delta Lake, Secure Ingestion) and **Scientific Rigor** (Time-Series Splitting), the pipeline achieves reliable and explainable results.
 
-## 💡 Conclusion & Future Work
-
-This project successfully demonstrates how to build a scalable, end-to-end data pipeline using **Spark** and **Delta Lake** on Databricks. By implementing the **Medallion Architecture**, the system ensures data quality from ingestion to analytics.
-
-The final Random Forest model achieved the primary business objective: **minimizing customer friction** (Precision **99.33%**) while maintaining a strong detection rate (Recall **80.98%**). This proves that the engineered features (`amountRatio`, `errorBalance`, `hourOfDay`) were effective in distinguishing fraudsters from genuine users.
-
-**Future Improvements (Path to Production):**
-1.  **Real-time Streaming:** Convert the ingestion layer to **Spark Structured Streaming** to block fraud transaction-by-transaction in real-time.
-2.  **Advanced Tuning:** Implement **Hyperparameter Tuning (GridSearch)** or adjust **Class Weights** to further improve Recall without sacrificing Precision.
-3.  **Orchestration:** Deploy using **Databricks Workflows** for automated daily runs and integrate with **MLflow** for model versioning.
-
----
+The use of **Delta Lake** ensures that the data foundation is solid, allowing the Machine Learning model to perform at its peak potential.
