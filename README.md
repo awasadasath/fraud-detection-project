@@ -10,7 +10,7 @@
 </div>
 
 ## 📌 Project Overview
-Fraud is a massive problem in mobile money transactions. The challenge isn't just catching the thieves—it's catching them **without blocking genuine customers**.
+Fraud is a massive problem in mobile money transactions. The challenge isn't just catching the thieves but it's catching them **without blocking genuine customers**.
 
 In this project, I built a production-grade Data Engineering pipeline on **Databricks** to process over **6.3 million transactions**. By using the **Medallion Architecture** (Bronze/Silver/Gold) and **Delta Lake**, I ensured data integrity from ingestion to analysis. The final output is a Machine Learning model that detects fraud with **99.98% Recall** while maintaining **Near-Perfect Precision**.
 
@@ -115,11 +115,11 @@ The numbers speak for themselves. Out of thousands of transactions, we missed on
 ![Confusion Matrix](images/confusion_matrix.png)
 
 ### 📈 Feature Importance
-What gave the thieves away? The model relied heavily on **`newbalanceOrig`** and **`amountRatio`**, confirming that the "Emptying Account" behavior is the strongest predictor of fraud.
+What gave the thieves away? The model relied heavily on **`newbalanceOrig`** and **`newbalanceOrig`** and **`amountRatio`**, confirming that the "Emptying Account" behavior is the strongest predictor of fraud.
 
 ![Feature Importance](images/feature_importance.png)
 
----
+--
 
 ## 💡 Conclusion
-This project demonstrates that high accuracy isn't enough—you need **Precision and Recall** in the right balance. By combining **Data Engineering best practices** (Delta Lake, Secure Ingestion) with **Scientific Rigor** (Time-Series Splitting), I built a pipeline that is not just a concept, but a **Production-Ready** solution.
+This project demonstrates that high accuracy isn't enough. You also need **Precision and Recall** in the right balance. By combining **Data Engineering best practices** (Delta Lake, Secure Ingestion) with **Scientific Rigor** (Time-Series Splitting), I built a pipeline that is not just a concept, but a **Production-Ready** solution.
