@@ -49,7 +49,8 @@ I designed the pipeline using the **Medallion Architecture** to guarantee data q
     * **Others:** Out-of-scope data (Payment/Debit) archived for analytics.
     * **Quarantine:** Technical errors (e.g., negative amounts) isolated for auditing.
 3.  **Feature Engineering (Gold):** Creation of behavioral features like `amountRatio` (Is the user emptying the account?) and `errorBalance` (Mathematical anomalies).
-4.  **Machine Learning:** Training a Random Forest Classifier using **Strict Time-Series Splitting** to prevent data leakage.
+4.  **Risk Profiling (Gold):** Aggregates customer history to create a **Daily Risk Snapshot**, identifying high-value customers for immediate business alerts.
+5.  **Machine Learning:** Training a Random Forest Classifier using **Strict Time-Series Splitting** to prevent data leakage.
 
 **🛠️ Technologies:**
 * **Platform:** Databricks (Spark Engine)
@@ -92,6 +93,19 @@ Instead of a random split (which is wrong for time-series data), I used **Time-S
 * *Test:* Future data (Steps 600+)
 This simulates a real production environment where we can't see the future.
 
+### 4. Customer Risk Profiling (Business Logic)
+Beyond real-time transaction detection, I implemented a **Customer Dimension Table** using a **Daily Snapshot Strategy**.
+* **The Logic:** The pipeline aggregates historical data to flag customers who have ever made transactions exceeding 1,000,000 as **"High Risk"**.
+* **The Value:** This creates a "Watchlist" for the business. Even if a transaction passes the ML model, a "High Risk" customer can still be subject to stricter manual review rules.
+* **Implementation:** Utilized Delta Lake's `overwrite` mode to ensure the risk profile always reflects the most current customer state (Simulating SCD Type 1 behavior).
+
+* **Implementation:** Utilized Delta Lake's `overwrite` mode to ensure the risk profile always reflects the most current customer state (Simulating SCD Type 1 behavior).
+
+**Snapshot of the Customer Risk Profile (Gold Layer)**
+*Shows "High Risk" customers identified by the pipeline.*
+
+![Customer Risk Profile Table Output](images/customer_risk_table.png)
+
 ---
 
 ## 📊 Model Performance & Results
@@ -122,4 +136,4 @@ What gave the thieves away? The model relied heavily on **`newbalanceOrig`** and
 --
 
 ## 💡 Conclusion
-This project demonstrates that high accuracy isn't enough. You also need **Precision and Recall** in the right balance. By combining **Data Engineering best practices** (Delta Lake, Secure Ingestion) with **Scientific Rigor** (Time-Series Splitting), I built a pipeline that is not just a concept, but a **Production-Ready** solution.
+This project demonstrates that high accuracy isn't enough. You also need **Precision and Recall** in the right balance. By combining **Data Engineering best practices** (Delta Lake, Secure Ingestion) with Time-Series Splitting, I built a pipeline that is not just a concept, but a **Production-Ready** solution.
